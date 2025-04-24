@@ -22,14 +22,30 @@ export default function Home() {
   useEffect(() => {
     setIsConnected(false);
     console.log("trying to connect to socket");
+
+    // Store socket reference
     const socket = io(SERVER_URL, {
       path: "/blast-server/socket.io",
+      reconnection: true,
+      reconnectionAttempts: 5,
     });
-    console.log("will I see that?");
-    if (!window.MediaSource) {
-      console.error("MediaSource API is not supported");
-      return;
-    }
+
+    console.log("Socket object created");
+
+    // Add these debug listeners
+    socket.on("connect", () => {
+      console.log("Socket connected successfully!");
+      setIsConnected(true);
+    });
+
+    socket.on("connect_error", (error) => {
+      console.error("Connection error:", error);
+    });
+
+    socket.on("disconnect", (reason) => {
+      console.log("Socket disconnected:", reason);
+      setIsConnected(false);
+    });
 
     const mediaSource = new MediaSource();
     mediaSourceRef.current = mediaSource;
@@ -66,6 +82,8 @@ export default function Home() {
     });
 
     return () => {
+      console.log("Component unmounting, disconnecting socket");
+
       socket.disconnect();
       if (mediaSource.readyState === "open") {
         mediaSource.endOfStream();
