@@ -16,6 +16,7 @@ export default function Home() {
   const [message, setMessage] = useState("");
 
   useEffect(() => {
+    setIsConnected(false);
     const socket = io("http://localhost:4000");
 
     if (!window.MediaSource) {
@@ -38,12 +39,12 @@ export default function Home() {
       sourceBuffer.mode = "segments";
 
       socket.emit("start-stream", { url: "https://web.whatsapp.com/" });
-      setIsConnected(true);
 
       socket.on("video-stream", (chunk: ArrayBuffer) => {
         if (sourceBuffer.updating) {
           return;
         }
+        setIsConnected(true);
         sourceBuffer.appendBuffer(chunk);
       });
 
@@ -83,110 +84,17 @@ export default function Home() {
 
   const scrapeContacts = async () => {
     try {
+      setContactStatus("loading");
       const res = await axios.get("http://localhost:4000/scrape-contacts");
       setContacts(res.data.contacts || []);
+      setContactStatus("success");
     } catch (err) {
       console.error("Failed to fetch contacts:", err);
+      setContactStatus("error");
     }
   };
 
   return (
-    // <div className="flex min-h-screen bg-gray-50 p-4">
-    //   {/* Controls Panel - Left Side */}
-    //   <div className="w-1/3 mr-4">
-    //     <div className="bg-white rounded-lg shadow-md p-5 space-y-4">
-    //       <h1 className="text-xl font-bold text-gray-800 border-b pb-2">WhatsApp Web Controller</h1>
-
-    //       <div className="space-y-4">
-    //         <div>
-    //           <h2 className="font-medium text-gray-700 mb-2">Send Message</h2>
-    //           <textarea
-    //             className="w-full border border-gray-300 rounded-md p-2 mb-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-    //             placeholder="Phone numbers (comma separated)"
-    //             value={phones}
-    //             onChange={(e) => setPhones(e.target.value)}
-    //             rows={2}
-    //           />
-
-    //           <textarea
-    //             className="w-full border border-gray-300 rounded-md p-2 mb-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-    //             placeholder="Your message"
-    //             value={message}
-    //             onChange={(e) => setMessage(e.target.value)}
-    //             rows={4}
-    //           />
-
-    //           <div className="flex items-center">
-    //             <button
-    //               className={`flex items-center justify-center px-4 py-2 rounded-md text-white ${
-    //                 status === "loading" || !phones || !message ? "bg-green-400 cursor-not-allowed" : "bg-green-600 hover:bg-green-700"
-    //               }`}
-    //               onClick={sendWhatsAppMessage}
-    //               disabled={status === "loading" || !phones || !message}
-    //             >
-    //               {status === "loading" && <Loader className="mr-2 h-4 w-4 animate-spin" />}
-    //               {status === "loading" ? "Sending..." : "Send WhatsApp Message"}
-    //             </button>
-
-    //             {status === "success" && <CheckCircle className="ml-3 h-6 w-6 text-green-600" />}
-    //             {status === "error" && <XCircle className="ml-3 h-6 w-6 text-red-600" />}
-    //           </div>
-    //         </div>
-
-    //         <div className="pt-2 border-t">
-    //           <h2 className="font-medium text-gray-700 mb-2">Contacts</h2>
-    //           <div className="flex items-center mb-4">
-    //             <button
-    //               onClick={scrapeContacts}
-    //               className={`flex items-center justify-center px-4 py-2 rounded-md text-white ${
-    //                 contactStatus === "loading" ? "bg-blue-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"
-    //               }`}
-    //               disabled={contactStatus === "loading"}
-    //             >
-    //               {contactStatus === "loading" && <Loader className="mr-2 h-4 w-4 animate-spin" />}
-    //               {contactStatus === "loading" ? "Fetching..." : "Scrape WhatsApp Contacts"}
-    //             </button>
-
-    //             {contactStatus === "success" && <CheckCircle className="ml-3 h-6 w-6 text-green-600" />}
-    //             {contactStatus === "error" && <XCircle className="ml-3 h-6 w-6 text-red-600" />}
-    //           </div>
-
-    //           {contacts.length > 0 && (
-    //             <div className="border rounded-md p-3 max-h-64 overflow-y-auto bg-gray-50">
-    //               <h3 className="font-medium mb-2 text-gray-600">Found {contacts.length} contacts:</h3>
-    //               <div className="text-sm text-gray-600">
-    //                 {contacts.map((contact, idx) => (
-    //                   <span key={idx}>
-    //                     {contact.replace(/\+/g, "").replace(/\s+/g, "")}
-    //                     {idx < contacts.length - 1 ? ", " : ""}
-    //                   </span>
-    //                 ))}
-    //               </div>
-    //             </div>
-    //           )}
-    //         </div>
-    //       </div>
-    //     </div>
-
-    //     <div className="mt-4 bg-white rounded-lg shadow-md p-4">
-    //       <div className={`flex items-center ${isConnected ? "text-green-600" : "text-red-600"}`}>
-    //         <div className={`h-3 w-3 rounded-full mr-2 ${isConnected ? "bg-green-600" : "bg-red-600"}`}></div>
-    //         <span>{isConnected ? "Connected to server" : "Disconnected"}</span>
-    //       </div>
-    //     </div>
-    //   </div>
-
-    //   {/* Video Stream - Right Side */}
-    //   <div className="w-2/3">
-    //     <div className="bg-white rounded-lg shadow-md p-2 h-full flex flex-col">
-    //       <h2 className="font-medium text-gray-700 mb-2 px-2">WhatsApp Web Live Stream</h2>
-    //       <div className="flex-1 bg-black rounded overflow-hidden p-2">
-    //         <video ref={videoRef} controls autoPlay muted className="w-full h-full object-cover" />
-    //       </div>
-    //       <p className="text-xs text-gray-500 mt-2 px-2">You'll see WhatsApp Web interactions happening in real-time above</p>
-    //     </div>
-    //   </div>
-    // </div>
     <div className="flex min-h-screen bg-gray-100 gap-6 p-6 justify-between">
       {/* Controls Panel - Left Side */}
       <div className="flex w-1/3 flex-col justify-center">
