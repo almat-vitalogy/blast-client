@@ -21,6 +21,7 @@ export default function Home() {
 
   useEffect(() => {
     setIsConnected(false);
+    console.log("trying to connect to socket");
     const socket = io(SERVER_URL, {
       path: "/blast-server/socket.io",
     });
