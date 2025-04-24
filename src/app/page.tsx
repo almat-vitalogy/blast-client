@@ -4,6 +4,9 @@ import io from "socket.io-client";
 import axios from "axios";
 import { CheckCircle, Loader, XCircle } from "lucide-react";
 
+// Replace this with your actual Render server URL
+const SERVER_URL = "https://blast-server.onrender.com";
+
 export default function Home() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const mediaSourceRef = useRef<MediaSource | null>(null);
@@ -17,7 +20,7 @@ export default function Home() {
 
   useEffect(() => {
     setIsConnected(false);
-    const socket = io("http://localhost:4000");
+    const socket = io(SERVER_URL);
 
     if (!window.MediaSource) {
       console.error("MediaSource API is not supported");
@@ -51,6 +54,11 @@ export default function Home() {
       socket.on("stream-ended", () => {
         mediaSource.endOfStream();
       });
+
+      socket.on("stream-error", (error) => {
+        console.error("Stream error:", error);
+        setIsConnected(false);
+      });
     });
 
     return () => {
@@ -70,7 +78,7 @@ export default function Home() {
 
     try {
       setStatus("loading");
-      await axios.post("http://localhost:4000/send-message", {
+      await axios.post(`${SERVER_URL}/send-message`, {
         phones: phoneList,
         message,
       });
@@ -85,7 +93,7 @@ export default function Home() {
   const scrapeContacts = async () => {
     try {
       setContactStatus("loading");
-      const res = await axios.get("http://localhost:4000/scrape-contacts");
+      const res = await axios.get(`${SERVER_URL}/scrape-contacts`);
       setContacts(res.data.contacts || []);
       setContactStatus("success");
     } catch (err) {
