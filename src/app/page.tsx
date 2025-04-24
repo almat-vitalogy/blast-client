@@ -21,7 +21,9 @@ export default function Home() {
 
   useEffect(() => {
     setIsConnected(false);
-    const socket = io(SERVER_URL);
+    const socket = io(SERVER_URL, {
+      path: "/blast-server/socket.io",
+    });
 
     if (!window.MediaSource) {
       console.error("MediaSource API is not supported");
