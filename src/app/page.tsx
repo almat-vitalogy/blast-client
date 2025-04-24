@@ -25,7 +25,7 @@ export default function Home() {
     const socket = io(SERVER_URL, {
       path: "/blast-server/socket.io",
     });
-
+    console.log("will I see that?");
     if (!window.MediaSource) {
       console.error("MediaSource API is not supported");
       return;
