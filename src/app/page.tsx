@@ -1,103 +1,278 @@
-import Image from "next/image";
+"use client";
+import { useEffect, useRef, useState } from "react";
+import io from "socket.io-client";
+import axios from "axios";
+import { CheckCircle, Loader, XCircle } from "lucide-react";
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const mediaSourceRef = useRef<MediaSource | null>(null);
+  const sourceBufferRef = useRef<SourceBuffer | null>(null);
+  const [status, setStatus] = useState("");
+  const [contactStatus, setContactStatus] = useState("");
+  const [isConnected, setIsConnected] = useState(false);
+  const [contacts, setContacts] = useState<string[]>([]);
+  const [phones, setPhones] = useState("");
+  const [message, setMessage] = useState("");
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
+  useEffect(() => {
+    const socket = io("http://localhost:4000");
+
+    if (!window.MediaSource) {
+      console.error("MediaSource API is not supported");
+      return;
+    }
+
+    const mediaSource = new MediaSource();
+    mediaSourceRef.current = mediaSource;
+
+    if (videoRef.current) {
+      videoRef.current.src = URL.createObjectURL(mediaSource);
+    }
+
+    mediaSource.addEventListener("sourceopen", () => {
+      const mimeCodec = 'video/webm; codecs="vp8"';
+      const sourceBuffer = mediaSource.addSourceBuffer(mimeCodec);
+      sourceBufferRef.current = sourceBuffer;
+
+      sourceBuffer.mode = "segments";
+
+      socket.emit("start-stream", { url: "https://web.whatsapp.com/" });
+      setIsConnected(true);
+
+      socket.on("video-stream", (chunk: ArrayBuffer) => {
+        if (sourceBuffer.updating) {
+          return;
+        }
+        sourceBuffer.appendBuffer(chunk);
+      });
+
+      socket.on("stream-ended", () => {
+        mediaSource.endOfStream();
+      });
+    });
+
+    return () => {
+      socket.disconnect();
+      if (mediaSource.readyState === "open") {
+        mediaSource.endOfStream();
+      }
+    };
+  }, []);
+
+  const sendWhatsAppMessage = async () => {
+    const phoneList = phones
+      .split(",")
+      .map((phone) => phone.trim())
+      .filter((phone) => phone);
+    console.log(phoneList);
+
+    try {
+      setStatus("loading");
+      await axios.post("http://localhost:4000/send-message", {
+        phones: phoneList,
+        message,
+      });
+      setStatus("success");
+      setMessage("");
+    } catch (error) {
+      console.error("Error sending message:", error);
+      setStatus("error");
+    }
+  };
+
+  const scrapeContacts = async () => {
+    try {
+      const res = await axios.get("http://localhost:4000/scrape-contacts");
+      setContacts(res.data.contacts || []);
+    } catch (err) {
+      console.error("Failed to fetch contacts:", err);
+    }
+  };
+
+  return (
+    // <div className="flex min-h-screen bg-gray-50 p-4">
+    //   {/* Controls Panel - Left Side */}
+    //   <div className="w-1/3 mr-4">
+    //     <div className="bg-white rounded-lg shadow-md p-5 space-y-4">
+    //       <h1 className="text-xl font-bold text-gray-800 border-b pb-2">WhatsApp Web Controller</h1>
+
+    //       <div className="space-y-4">
+    //         <div>
+    //           <h2 className="font-medium text-gray-700 mb-2">Send Message</h2>
+    //           <textarea
+    //             className="w-full border border-gray-300 rounded-md p-2 mb-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+    //             placeholder="Phone numbers (comma separated)"
+    //             value={phones}
+    //             onChange={(e) => setPhones(e.target.value)}
+    //             rows={2}
+    //           />
+
+    //           <textarea
+    //             className="w-full border border-gray-300 rounded-md p-2 mb-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+    //             placeholder="Your message"
+    //             value={message}
+    //             onChange={(e) => setMessage(e.target.value)}
+    //             rows={4}
+    //           />
+
+    //           <div className="flex items-center">
+    //             <button
+    //               className={`flex items-center justify-center px-4 py-2 rounded-md text-white ${
+    //                 status === "loading" || !phones || !message ? "bg-green-400 cursor-not-allowed" : "bg-green-600 hover:bg-green-700"
+    //               }`}
+    //               onClick={sendWhatsAppMessage}
+    //               disabled={status === "loading" || !phones || !message}
+    //             >
+    //               {status === "loading" && <Loader className="mr-2 h-4 w-4 animate-spin" />}
+    //               {status === "loading" ? "Sending..." : "Send WhatsApp Message"}
+    //             </button>
+
+    //             {status === "success" && <CheckCircle className="ml-3 h-6 w-6 text-green-600" />}
+    //             {status === "error" && <XCircle className="ml-3 h-6 w-6 text-red-600" />}
+    //           </div>
+    //         </div>
+
+    //         <div className="pt-2 border-t">
+    //           <h2 className="font-medium text-gray-700 mb-2">Contacts</h2>
+    //           <div className="flex items-center mb-4">
+    //             <button
+    //               onClick={scrapeContacts}
+    //               className={`flex items-center justify-center px-4 py-2 rounded-md text-white ${
+    //                 contactStatus === "loading" ? "bg-blue-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"
+    //               }`}
+    //               disabled={contactStatus === "loading"}
+    //             >
+    //               {contactStatus === "loading" && <Loader className="mr-2 h-4 w-4 animate-spin" />}
+    //               {contactStatus === "loading" ? "Fetching..." : "Scrape WhatsApp Contacts"}
+    //             </button>
+
+    //             {contactStatus === "success" && <CheckCircle className="ml-3 h-6 w-6 text-green-600" />}
+    //             {contactStatus === "error" && <XCircle className="ml-3 h-6 w-6 text-red-600" />}
+    //           </div>
+
+    //           {contacts.length > 0 && (
+    //             <div className="border rounded-md p-3 max-h-64 overflow-y-auto bg-gray-50">
+    //               <h3 className="font-medium mb-2 text-gray-600">Found {contacts.length} contacts:</h3>
+    //               <div className="text-sm text-gray-600">
+    //                 {contacts.map((contact, idx) => (
+    //                   <span key={idx}>
+    //                     {contact.replace(/\+/g, "").replace(/\s+/g, "")}
+    //                     {idx < contacts.length - 1 ? ", " : ""}
+    //                   </span>
+    //                 ))}
+    //               </div>
+    //             </div>
+    //           )}
+    //         </div>
+    //       </div>
+    //     </div>
+
+    //     <div className="mt-4 bg-white rounded-lg shadow-md p-4">
+    //       <div className={`flex items-center ${isConnected ? "text-green-600" : "text-red-600"}`}>
+    //         <div className={`h-3 w-3 rounded-full mr-2 ${isConnected ? "bg-green-600" : "bg-red-600"}`}></div>
+    //         <span>{isConnected ? "Connected to server" : "Disconnected"}</span>
+    //       </div>
+    //     </div>
+    //   </div>
+
+    //   {/* Video Stream - Right Side */}
+    //   <div className="w-2/3">
+    //     <div className="bg-white rounded-lg shadow-md p-2 h-full flex flex-col">
+    //       <h2 className="font-medium text-gray-700 mb-2 px-2">WhatsApp Web Live Stream</h2>
+    //       <div className="flex-1 bg-black rounded overflow-hidden p-2">
+    //         <video ref={videoRef} controls autoPlay muted className="w-full h-full object-cover" />
+    //       </div>
+    //       <p className="text-xs text-gray-500 mt-2 px-2">You'll see WhatsApp Web interactions happening in real-time above</p>
+    //     </div>
+    //   </div>
+    // </div>
+    <div className="flex min-h-screen bg-gray-100 gap-6 p-6 justify-between">
+      {/* Controls Panel - Left Side */}
+      <div className="flex w-1/3 flex-col justify-center">
+        <div className="bg-white rounded-xl shadow-lg p-6 space-y-6">
+          <h1 className="text-2xl font-semibold text-gray-700 pb-3 border-b">WhatsApp Web Controller</h1>
+
+          <div>
+            <h2 className="font-medium text-gray-600 mb-2">Send Message</h2>
+            <textarea
+              className="w-full border border-gray-300 rounded-lg p-3 mb-3 focus:ring-2 focus:ring-teal-500 outline-none"
+              placeholder="Phone numbers (comma separated)"
+              value={phones}
+              onChange={(e) => setPhones(e.target.value)}
+              rows={2}
             />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+
+            <textarea
+              className="w-full border border-gray-300 rounded-lg p-3 mb-3 focus:ring-2 focus:ring-teal-500 outline-none"
+              placeholder="Your message"
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              rows={4}
+            />
+
+            <div className="flex items-center">
+              <button
+                className={`px-4 py-2 rounded-lg text-white transition duration-200 ${
+                  status === "loading" || !phones || !message ? "bg-teal-300 cursor-not-allowed" : "bg-teal-600 hover:bg-teal-700"
+                }`}
+                onClick={sendWhatsAppMessage}
+                disabled={status === "loading" || !phones || !message}
+              >
+                {status === "loading" && <Loader className="mr-2 h-4 w-4 animate-spin" />}
+                {status === "loading" ? "Sending..." : "Send Message"}
+              </button>
+
+              {status === "success" && <CheckCircle className="ml-3 h-6 w-6 text-teal-600" />}
+              {status === "error" && <XCircle className="ml-3 h-6 w-6 text-red-500" />}
+            </div>
+          </div>
+
+          <div className="border-t pt-4">
+            <h2 className="font-medium text-gray-600 mb-3">Contacts</h2>
+            <button
+              onClick={scrapeContacts}
+              className={`px-4 py-2 rounded-lg text-white transition duration-200 ${
+                contactStatus === "loading" ? "bg-sky-300 cursor-not-allowed" : "bg-sky-600 hover:bg-sky-700"
+              }`}
+              disabled={contactStatus === "loading"}
+            >
+              {contactStatus === "loading" && <Loader className="mr-2 h-4 w-4 animate-spin" />}
+              {contactStatus === "loading" ? "Fetching..." : "Scrape Contacts"}
+            </button>
+
+            {contacts.length > 0 && (
+              <div className="mt-3 border rounded-lg p-3 max-h-48 overflow-y-auto bg-gray-50">
+                <h3 className="font-medium mb-2 text-gray-600">{contacts.length} contacts found:</h3>
+                <div className="text-sm text-gray-600">
+                  {contacts.map((contact, idx) => (
+                    <span key={idx}>
+                      {contact.replace(/\+/g, "").replace(/\s+/g, "")}
+                      {idx < contacts.length - 1 ? ", " : ""}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+
+        <div className="mt-4 bg-white rounded-xl shadow-lg p-4 text-gray-600 flex items-center justify-center">
+          <div className={`h-3 w-3 rounded-full mr-2 ${isConnected ? "bg-green-500" : "bg-red-500"}`}></div>
+          <span>{isConnected ? "Connected to server" : "Disconnected"}</span>
+        </div>
+      </div>
+
+      {/* Video Stream - Right Side */}
+      <div className="flex justify-center items-center">
+        <div className="bg-white rounded-xl shadow-lg w-[950px] h-[750px] aspect-square flex flex-col p-2">
+          <h2 className="font-medium text-gray-700 mb-2">WhatsApp Web Live Stream</h2>
+          <div className="flex-1 bg-gray-200 rounded overflow-hidden">
+            <video ref={videoRef} controls autoPlay muted className="w-full h-full object-cover" />
+          </div>
+          <p className="text-xs text-gray-500 mt-2">WhatsApp Web interactions appear in real-time</p>
+        </div>
+      </div>
     </div>
   );
 }
