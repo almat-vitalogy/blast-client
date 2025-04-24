@@ -24,7 +24,7 @@ export default function Home() {
     console.log("trying to connect to socket");
 
     // Store socket reference
-    const socket = io(SERVER_URL, {
+    const socket = io("https://api.turoid.ai/", {
       path: "/blast-server/socket.io",
       reconnection: true,
       reconnectionAttempts: 5,
