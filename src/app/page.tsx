@@ -5,8 +5,8 @@ import axios from "axios";
 import { CheckCircle, Loader, XCircle } from "lucide-react";
 
 // Replace this with your actual Render server URL
-const SERVER_URL = "https://api.turoid.ai/blast-server/";
-// const SERVER_URL = "http://localhost:4000/";
+// const SERVER_URL = "https://api.turoid.ai/blast-server/";
+const SERVER_URL = "http://localhost:4000/";
 
 export default function Home() {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -24,11 +24,12 @@ export default function Home() {
     console.log("trying to connect to socket");
 
     // Store socket reference
-    const socket = io("https://api.turoid.ai/", {
-      path: "/blast-server/socket.io",
-      reconnection: true,
-      reconnectionAttempts: 5,
-    });
+    // const socket = io("https://api.turoid.ai/", {
+    //   path: "/blast-server/socket.io",
+    //   reconnection: true,
+    //   reconnectionAttempts: 5,
+    // });
+    const socket = io("http://localhost:4000/", {});
 
     console.log("Socket object created");
 
