@@ -205,7 +205,7 @@ export default function Home() {
       {/* Video Stream - Right Side */}
       <div className="flex justify-center items-center">
         <div className="bg-white rounded-xl shadow-lg w-[950px] h-[750px] aspect-square flex flex-col p-2">
-          <h2 className="font-medium text-gray-700 mb-2">WhatsApp Web Live Stream</h2>
+          <h2 className="font-medium text-gray-700 mb-2">WhatsApp Live Stream</h2>
           <div className="flex-1 bg-gray-200 rounded overflow-hidden">
             <video ref={videoRef} controls autoPlay muted className="w-full h-full object-cover" />
           </div>
