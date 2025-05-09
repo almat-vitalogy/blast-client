@@ -6,7 +6,8 @@ import { CheckCircle, Loader, XCircle } from "lucide-react";
 
 // Replace this with your actual Render server URL
 // const SERVER_URL = "https://api.turoid.ai/blast-server/";
-const SERVER_URL = "http://localhost:4000/";
+// const SERVER_URL = "http://localhost:4000/";
+const SERVER_URL = "https://dealmaker.turoid.ai/";
 
 export default function Home() {
   const videoRef = useRef<HTMLVideoElement>(null);
